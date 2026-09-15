@@ -1,0 +1,10 @@
+{
+  "name": "Portal & Layanan Mandiri Desa Nyurlembang",
+  "description": "Sistem Informasi Desa (SID) dan Layanan Administrasi Surat Mandiri Desa Nyurlembang, Kecamatan Narmada, Lombok Barat berbasis Supabase RBAC & Cetak Naskah Dinas.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

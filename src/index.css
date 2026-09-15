@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1565C0;
+  --color-primary-dark: #0D2A4A;
+  --color-secondary: #2E7D32;
+  --color-accent-gold: #FFB300;
+  --color-accent-red: #B71C1C;
+  --color-water-blue: #03A9F4;
+  --color-neutral-surface: #EEF2F6;
+
+  --font-heading: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-kedinasan: 'Bookman Old Style', 'Merriweather', 'Noto Serif', Georgia, serif;
+}
+
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #EEF2F6;
+    color: #0D2A4A;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: #0D2A4A;
+  }
+}
+
+/* Standar Kartu Konten Kedinasan */
+.card-kedinasan {
+  background-color: #FFFFFF;
+  border-radius: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 4px 20px rgba(13, 42, 74, 0.06);
+}
+
+/* Naskah Dinas & Dokumen Standar Baku Permendagri No. 1 Tahun 2023 */
+.font-kedinasan {
+  font-family: 'Bookman Old Style', 'Merriweather', 'Noto Serif', Georgia, serif;
+}
+
+/* Garis Pembatas Ganda Kop Surat Resmi Pemerintahan */
+.border-double-kop {
+  border-bottom: 3px double #000000;
+}
+
+/* Smooth modal & drawer scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Official Palette Utility Classes */
+.bg-official-primary { background-color: #1565C0; }
+.bg-official-navy { background-color: #0D2A4A; }
+.bg-official-green { background-color: #2E7D32; }
+.bg-official-gold { background-color: #FFB300; }
+.bg-official-red { background-color: #B71C1C; }
+.bg-official-cyan { background-color: #03A9F4; }
+.bg-official-surface { background-color: #F8FAFC; }
+
+.text-official-primary { color: #1565C0; }
+.text-official-navy { color: #0D2A4A; }
+.text-official-green { color: #2E7D32; }
+.text-official-gold { color: #FFB300; }
+.text-official-red { color: #B71C1C; }
+.text-official-cyan { color: #03A9F4; }
+
+.border-official-primary { border-color: #1565C0; }
+.border-official-navy { border-color: #0D2A4A; }
+.border-official-green { border-color: #2E7D32; }
+.border-official-gold { border-color: #FFB300; }
+.border-official-red { border-color: #B71C1C; }
+.border-official-cyan { border-color: #03A9F4; }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-family: 'Bookman Old Style', 'Merriweather', 'Noto Serif', Georgia, serif !important;
+    font-size: 12pt;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm 2cm 2cm 2cm;
+  }
+}
+
