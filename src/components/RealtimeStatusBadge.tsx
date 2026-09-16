@@ -82,28 +82,24 @@ export const RealtimeStatusBadge: React.FC<RealtimeStatusBadgeProps> = ({ compac
   }
 
   return (
-    <div className="relative inline-flex items-center gap-2 bg-emerald-50/90 border border-emerald-200/80 px-3 py-1.5 rounded-xl shadow-2xs">
-      <span className="relative flex h-2.5 w-2.5">
+    <div className="relative inline-flex items-center gap-1.5 bg-emerald-50/90 border border-emerald-200/80 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl shadow-2xs">
+      <span className="relative flex h-2 w-2">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
       </span>
 
-      <div className="flex flex-col">
-        <span className="text-xs font-bold text-emerald-800 leading-tight flex items-center gap-1">
-          <span>Real-time Multi-Perangkat Aktif</span>
-        </span>
-        <span className="text-[10px] text-emerald-600 leading-tight">
-          Komputer A &harr; B, C, D sinkron live ({lastSyncText})
-        </span>
-      </div>
+      <span className="text-[11px] font-bold text-emerald-800 leading-tight hidden xs:inline">
+        Live
+      </span>
 
       <button
         onClick={handleManualSync}
         disabled={isSyncing}
-        title="Paksa Sinkronkan Ulang Sekarang"
-        className="ml-1 p-1 hover:bg-emerald-200/60 text-emerald-700 rounded-lg transition-colors cursor-pointer"
+        title={`Status: Realtime Terhubung (${lastSyncText}). Klik untuk sinkron ulang manual.`}
+        className="p-1 hover:bg-emerald-200/60 text-emerald-700 rounded-lg transition-colors cursor-pointer"
+        aria-label="Sinkronkan data"
       >
-        <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+        <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
       </button>
     </div>
   );
