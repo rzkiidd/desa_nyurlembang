@@ -41,7 +41,7 @@ export const Footer: React.FC = () => {
 
   return (
     <footer className="bg-[#0D2A4A] text-slate-300 pt-8 pb-6 border-t border-blue-900/60 no-print font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 space-y-6">
         {/* GRID UTAMA (3 KOLOM BERSIH & COMPACT) */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pb-6 border-b border-blue-900/40">
           {/* Kolom 1: Identitas Resmi */}
