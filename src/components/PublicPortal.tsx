@@ -25,6 +25,7 @@ import {
 } from '../types';
 import { GaleriKegiatanDesa } from './GaleriKegiatanDesa';
 import { StatistikDanApbdesSlider } from './StatistikDanApbdesSlider';
+import { useRealtimeSync } from '../lib/useRealtimeSync';
 import {
   FileText,
   Search,
@@ -103,8 +104,22 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
   // Pejabat Carousel Index for sidebar widget
   const [pejabatIndex, setPejabatIndex] = useState(0);
 
-  // Load data on mount
-  useEffect(() => {
+  // Single Source of Truth Kepala Desa dari database aparatur desa
+  const kades = pejabatList.find((p) => p.jabatan.toLowerCase().includes('kepala desa')) || {
+    id: 'pj-kades',
+    nama: 'H. Wardi, S.AP',
+    jabatan: 'Kepala Desa Nyurlembang',
+    nip: '19750812 200501 1 003',
+    foto_url: pengaturan.sambutan_kades_foto || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+    urutan: 1,
+  };
+
+  // Daftar aparatur / perangkat desa (staf dan pimpinan kewilayahan selain Kades agar tidak bentrok atau berulang di slider)
+  const perangkatDesaList = pejabatList.filter((p) => !p.jabatan.toLowerCase().includes('kepala desa'));
+  const activePerangkatList = perangkatDesaList.length > 0 ? perangkatDesaList : pejabatList;
+  const currentPejabat = activePerangkatList.length > 0 ? activePerangkatList[pejabatIndex % activePerangkatList.length] : null;
+
+  const reloadData = () => {
     setBanners(getStoredBannerSlides().filter((b) => b.aktif));
     setPejabatList(getStoredPejabatDesa().sort((a, b) => a.urutan - b.urutan));
     setPengaturan(getStoredPengaturanDesa());
@@ -113,7 +128,16 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
     setGaleriList(getStoredGaleriKegiatan());
     setStatistik(getStoredStatistikDesa());
     setProdukHukumList(getStoredProdukHukum());
+  };
+
+  // Load data on mount & Dengarkan update database secara realtime
+  useEffect(() => {
+    reloadData();
   }, []);
+
+  useRealtimeSync('*', () => {
+    reloadData();
+  });
 
   // Handle activeSubSection from Navbar dropdowns
   useEffect(() => {
@@ -720,7 +744,7 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
               KOLOM KANAN / STICKY SIDEBAR (~35% / 4 Kolom Desktop)
              ===================================================================== */}
           <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-24">
-            {/* WIDGET 1: PIMPINAN WILAYAH (Hanya Foto, Nama, dan Jabatan) */}
+            {/* WIDGET 1: PIMPINAN WILAYAH (Single Source of Truth Kepala Desa) */}
             <div className="card-kedinasan p-5 space-y-3.5 shadow-sm">
               <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100">
                 <Award className="w-4 h-4 text-[#1565C0]" />
@@ -731,62 +755,74 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
 
               <div className="flex items-center gap-3.5">
                 <img
-                  src={pengaturan.sambutan_kades_foto || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80"}
-                  alt="H. Wardi, S.AP"
+                  src={kades.foto_url || pengaturan.sambutan_kades_foto || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80"}
+                  alt={kades.nama}
                   className="w-16 h-20 sm:w-20 sm:h-24 rounded-xl object-cover border-2 border-[#1565C0] shadow-sm shrink-0"
                 />
                 <div className="min-w-0">
                   <h4 className="font-heading font-black text-sm sm:text-base text-[#0D2A4A] leading-snug truncate">
-                    H. Wardi, S.AP
+                    {kades.nama}
                   </h4>
                   <div className="text-xs font-semibold text-[#1565C0] mt-0.5">
-                    Kepala Desa Nyurlembang
+                    {kades.jabatan}
                   </div>
+                  {kades.nip && (
+                    <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+                      {kades.nip.startsWith('NIP') ? kades.nip : `NIPD: ${kades.nip}`}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* WIDGET 2: PERANGKAT DESA (Hanya Foto, Nama, dan Jabatan) */}
+            {/* WIDGET 2: PERANGKAT DESA (Staf & Aparatur Kewilayahan Selain Kades) */}
             <div id="aparatur" className="card-kedinasan p-5 space-y-3.5 shadow-sm">
               <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#1565C0]" />
                   <h3 className="font-bold text-xs sm:text-sm text-[#0D2A4A] font-heading">Perangkat Desa</h3>
                 </div>
-                <span className="text-[11px] font-bold text-[#1565C0] font-mono">
-                  {pejabatIndex + 1} / {pejabatList.length}
-                </span>
+                {activePerangkatList.length > 0 && (
+                  <span className="text-[11px] font-bold text-[#1565C0] font-mono">
+                    {(pejabatIndex % activePerangkatList.length) + 1} / {activePerangkatList.length}
+                  </span>
+                )}
               </div>
 
-              {pejabatList.length > 0 && (
+              {currentPejabat && (
                 <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/80 space-y-3">
                   <div className="flex items-center gap-3">
                     <img
-                      src={pejabatList[pejabatIndex].foto_url}
-                      alt={pejabatList[pejabatIndex].nama}
+                      src={currentPejabat.foto_url}
+                      alt={currentPejabat.nama}
                       className="w-14 h-18 sm:w-16 sm:h-20 rounded-xl object-cover border border-slate-200 shrink-0 shadow-xs"
                     />
                     <div className="min-w-0">
                       <div className="font-bold text-xs sm:text-sm text-[#0D2A4A] leading-snug">
-                        {pejabatList[pejabatIndex].nama}
+                        {currentPejabat.nama}
                       </div>
                       <div className="text-xs font-semibold text-[#1565C0] mt-0.5">
-                        {pejabatList[pejabatIndex].jabatan}
+                        {currentPejabat.jabatan}
                       </div>
+                      {currentPejabat.nip && currentPejabat.nip !== '-' && (
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                          {currentPejabat.nip}
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
                     <button
                       type="button"
-                      onClick={() => setPejabatIndex((prev) => (prev === 0 ? pejabatList.length - 1 : prev - 1))}
+                      onClick={() => setPejabatIndex((prev) => (prev === 0 ? activePerangkatList.length - 1 : prev - 1))}
                       className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 text-[11px] font-semibold cursor-pointer transition-colors"
                     >
                       &larr; Sebelumnya
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPejabatIndex((prev) => (prev + 1) % pejabatList.length)}
+                      onClick={() => setPejabatIndex((prev) => (prev + 1) % activePerangkatList.length)}
                       className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 text-[11px] font-semibold cursor-pointer transition-colors"
                     >
                       Selanjutnya &rarr;
