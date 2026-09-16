@@ -64,9 +64,68 @@ function aistudioMediaPlugin(): Plugin {
 }
 // LINT.ThenChange(//depot/google3/java/com/google/alkali/boq/makersuite/applet_dev_service/templates/initializers/react_theme/vite.config.ts:aistudio_media_plugin)
 
+// Plugin untuk injeksi Meta Tags Open Graph & Twitter Card secara dinamis dari Server (SSR / Crawler support)
+function dynamicSocialMetaPlugin(): Plugin {
+  return {
+    name: 'vite-plugin-dynamic-social-meta',
+    transformIndexHtml(html, ctx) {
+      const rawUrl = ctx.originalUrl || (ctx as { path?: string; url?: string }).url || '';
+      const match = rawUrl.match(/[?&]berita=([^&#]+)/);
+      if (!match) return html;
+
+      const beritaId = decodeURIComponent(match[1]);
+
+      // Data lookup katalog berita utama
+      const newsMap: Record<
+        string,
+        { judul: string; ringkasan: string; gambar_url: string; penulis: string }
+      > = {
+        'news-1': {
+          judul: 'Penyaluran BLT Dana Desa Tahap 3 Berlangsung Tertib di Aula Kantor Desa Nyurlembang',
+          ringkasan: 'Sebanyak 65 Keluarga Penerima Manfaat (KPM) di Desa Nyurlembang menerima bantuan langsung tunai dengan nominal Rp 300.000 per bulan.',
+          gambar_url: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200&auto=format&fit=crop&q=80',
+          penulis: 'Lalu Agus Prasetya',
+        },
+        'news-2': {
+          judul: 'Pemdes Nyurlembang Gelar Pelatihan Kemasan Higienis & P-IRT untuk Pelaku UMKM Gula Aren',
+          ringkasan: 'Mendorong daya saing produk lokal khas Narmada tembus ritel modern di Lombok Barat dan Mataram melalui sertifikasi standar BPOM dan kemasan kedap udara.',
+          gambar_url: 'https://images.unsplash.com/photo-1556742049-0a67e5572293?w=1200&auto=format&fit=crop&q=80',
+          penulis: 'Baiq Rohani, S.Sos',
+        },
+        'news-3': {
+          judul: 'Aksi Gotong Royong Saluran Subak Nyurlembang Siapkan Ketahanan Pangan Musim Tanam',
+          ringkasan: 'Warga tani 4 dusun bersama Babinsa dan perangkat desa membersihkan sedimentasi saluran primer pengairan sawah sepanjang 1,8 kilometer.',
+          gambar_url: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1200&auto=format&fit=crop&q=80',
+          penulis: 'Lalu Agus Prasetya',
+        },
+      };
+
+      const found = newsMap[beritaId];
+      if (!found) return html;
+
+      const targetTitle = `${found.judul} - Desa Nyurlembang`;
+      const targetDesc = found.ringkasan;
+      const targetImage = found.gambar_url;
+
+      let modified = html;
+      modified = modified.replace(/<title>.*?<\/title>/i, `<title>${targetTitle}</title>`);
+      modified = modified.replace(/<meta property="og:title" content=".*?" \/>/i, `<meta property="og:title" content="${targetTitle}" />`);
+      modified = modified.replace(/<meta property="og:description" content=".*?" \/>/i, `<meta property="og:description" content="${targetDesc}" />`);
+      modified = modified.replace(/<meta property="og:type" content=".*?" \/>/i, `<meta property="og:type" content="article" />`);
+      modified = modified.replace(/<meta property="og:image" content=".*?" \/>/i, `<meta property="og:image" content="${targetImage}" />`);
+      modified = modified.replace(/<meta property="og:image:secure_url" content=".*?" \/>/i, `<meta property="og:image:secure_url" content="${targetImage}" />`);
+      modified = modified.replace(/<meta name="twitter:title" content=".*?" \/>/i, `<meta name="twitter:title" content="${targetTitle}" />`);
+      modified = modified.replace(/<meta name="twitter:description" content=".*?" \/>/i, `<meta name="twitter:description" content="${targetDesc}" />`);
+      modified = modified.replace(/<meta name="twitter:image" content=".*?" \/>/i, `<meta name="twitter:image" content="${targetImage}" />`);
+
+      return modified;
+    },
+  };
+}
+
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss(), aistudioMediaPlugin()],
+    plugins: [react(), tailwindcss(), aistudioMediaPlugin(), dynamicSocialMetaPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
