@@ -78,11 +78,13 @@ import {
   MessageSquare,
   UserPlus,
   LogOut,
-  MessageCircle
+  MessageCircle,
+  Store
 } from 'lucide-react';
 import { KelolaGaleriKegiatan } from './admin/KelolaGaleriKegiatan';
 import { KelolaStatistikDesa } from './admin/KelolaStatistikDesa';
 import { KelolaBeritaDesa } from './admin/KelolaBeritaDesa';
+import { KelolaUmkmDesa } from './admin/KelolaUmkmDesa';
 import { KelolaProdukHukum } from './admin/KelolaProdukHukum';
 import { KelolaManajemenUser } from './admin/KelolaManajemenUser';
 import { KelolaPengaduanWarga } from './admin/KelolaPengaduanWarga';
@@ -109,6 +111,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     | 'kelola_pejabat'
     | 'kelola_banner'
     | 'kelola_berita'
+    | 'kelola_umkm'
     | 'kelola_kontak'
     | 'kelola_galeri'
     | 'kelola_statistik'
@@ -619,6 +622,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     { id: 'kelola_surat', label: 'Master Layanan & Syarat', icon: FileCheck },
     { id: 'kelola_pengaduan', label: 'Pengaduan Warga', icon: MessageSquare, count: pengaduanMenungguCount },
     { id: 'kelola_berita', label: 'Berita & Publikasi', icon: Newspaper },
+    { id: 'kelola_umkm', label: 'Pengelolaan UMKM', icon: Store },
     { id: 'kelola_galeri', label: 'Galeri Foto Kegiatan', icon: Camera },
     { id: 'kelola_statistik', label: 'Statistik & APBDes 2026', icon: BarChart3 },
   ];
@@ -2951,6 +2955,15 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       {activeTab === 'kelola_berita' && (
         <div className="card-kedinasan p-6">
           <KelolaBeritaDesa currentUser={currentUser} />
+        </div>
+      )}
+
+      {/* =========================================================================
+          TAB: KELOLA POTENSI UMKM WARGA 4 DUSUN (PRODUK & USAHA LOKAL)
+      ========================================================================= */}
+      {activeTab === 'kelola_umkm' && (
+        <div className="card-kedinasan p-4 sm:p-6">
+          <KelolaUmkmDesa currentUser={currentUser} />
         </div>
       )}
 
