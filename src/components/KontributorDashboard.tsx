@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, PotensiUmkm } from '../types';
-import { INITIAL_UMKM, DAFTAR_DUSUN } from '../data/mockData';
+import { UserProfile } from '../types';
+import { DAFTAR_DUSUN } from '../data/mockData';
 import { KelolaBeritaDesa } from './admin/KelolaBeritaDesa';
+import { KelolaUmkmDesa } from './admin/KelolaUmkmDesa';
 import {
   Newspaper,
   Store,
@@ -37,7 +38,6 @@ export const KontributorDashboard: React.FC<KontributorDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'berita' | 'umkm' | 'agenda' | 'akses_terlarang'>('berita');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [umkmList, setUmkmList] = useState<PotensiUmkm[]>(INITIAL_UMKM);
 
   // Kunci scroll body saat sidebar mobile terbuka
   useEffect(() => {
@@ -50,16 +50,6 @@ export const KontributorDashboard: React.FC<KontributorDashboardProps> = ({
       document.body.style.overflow = 'unset';
     };
   }, [mobileSidebarOpen]);
-
-  // Form Tambah UMKM Modal
-  const [showAddUmkm, setShowAddUmkm] = useState(false);
-  const [umkmNama, setUmkmNama] = useState('');
-  const [umkmPemilik, setUmkmPemilik] = useState('');
-  const [umkmKategori, setUmkmKategori] = useState<'Kuliner' | 'Agribisnis' | 'Kerajinan' | 'Jasa'>('Kuliner');
-  const [umkmDusun, setUmkmDusun] = useState(DAFTAR_DUSUN[0]);
-  const [umkmDeskripsi, setUmkmDeskripsi] = useState('');
-  const [umkmHarga, setUmkmHarga] = useState('');
-  const [umkmWa, setUmkmWa] = useState('');
 
   // Agenda State
   const [agendaList, setAgendaList] = useState([
@@ -91,31 +81,6 @@ export const KontributorDashboard: React.FC<KontributorDashboardProps> = ({
       pj: 'Kelompok Tani Aren Bersatu'
     }
   ]);
-
-  const handleAddUmkm = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!umkmNama.trim() || !umkmPemilik.trim()) return;
-
-    const baru: PotensiUmkm = {
-      id: `umkm-${Date.now()}`,
-      nama_usaha: umkmNama,
-      pemilik: umkmPemilik,
-      kategori: umkmKategori,
-      dusun: umkmDusun,
-      deskripsi: umkmDeskripsi,
-      harga_rentang: umkmHarga || 'Rp 15.000 - Rp 50.000',
-      kontak_wa: umkmWa || '081912345678',
-      foto_url: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80',
-    };
-
-    setUmkmList([baru, ...umkmList]);
-    setShowAddUmkm(false);
-    setUmkmNama('');
-    setUmkmPemilik('');
-    setUmkmDeskripsi('');
-    setUmkmHarga('');
-    setUmkmWa('');
-  };
 
   const navItems = [
     { id: 'berita', label: 'Tulis & Kelola Berita', icon: Newspaper, locked: false },
@@ -325,65 +290,9 @@ export const KontributorDashboard: React.FC<KontributorDashboardProps> = ({
           </div>
         )}
 
-        {/* TAB 2: POTENSI UMKM 6 DUSUN */}
+        {/* TAB 2: POTENSI UMKM 4 DUSUN (TERHUBUNG KE SUPABASE REALTIME & DATABASE) */}
         {activeTab === 'umkm' && (
-          <div className="card-kedinasan p-6 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <div>
-                <h2 className="text-xl font-bold text-[#0D2A4A] font-heading flex items-center gap-2">
-                  <Store className="w-5 h-5 text-[#2E7D32]" />
-                  <span>Etalase Produk UMKM Warga 4 Dusun</span>
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Promosikan komoditas pertanian, olahan aren, madu, dan kerajinan tangan warga Dusun Nyurlembang.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowAddUmkm(true)}
-                className="px-4 py-2.5 bg-[#2E7D32] hover:bg-[#256629] text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs self-start sm:self-auto"
-              >
-                <Plus className="w-4 h-4 text-[#FFB300]" />
-                <span>Tambah Usaha UMKM</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {umkmList.map((u) => (
-                <div
-                  key={u.id}
-                  className="bg-slate-50/50 rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs hover:border-[#2E7D32] transition-all p-4 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="h-40 rounded-xl overflow-hidden mb-3 bg-slate-100">
-                      <img src={u.foto_url} alt={u.nama_usaha} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-[#2E7D32] rounded border border-emerald-200">
-                        {u.kategori}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-medium">{u.dusun}</span>
-                    </div>
-                    <h4 className="font-bold text-[#0D2A4A] text-sm mt-2">{u.nama_usaha}</h4>
-                    <div className="text-xs text-slate-500">{u.pemilik}</div>
-                    <div className="text-xs font-bold text-[#2E7D32] font-mono mt-1.5">{u.harga_rentang}</div>
-                    <p className="text-xs text-slate-600 mt-2 line-clamp-2">{u.deskripsi}</p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between">
-                    <a
-                      href={`https://wa.me/62${u.kontak_wa.replace(/^0/, '')}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-3 py-1.5 bg-[#2E7D32] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-[#256629]"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>Chat WhatsApp</span>
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <KelolaUmkmDesa currentUser={currentUser} />
         )}
 
         {/* TAB 3: AGENDA ACARA DESA */}
@@ -462,132 +371,6 @@ export const KontributorDashboard: React.FC<KontributorDashboardProps> = ({
         )}
         </main>
       </div>
-
-      {/* MODAL TAMBAH UMKM */}
-      {showAddUmkm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
-              <h3 className="text-base font-bold text-[#0D2A4A] font-heading flex items-center gap-2">
-                <Store className="w-4 h-4 text-[#2E7D32]" />
-                <span>Tambah Produk UMKM Warga</span>
-              </h3>
-              <button
-                onClick={() => setShowAddUmkm(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddUmkm} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nama Usaha / Produk *</label>
-                <input
-                  type="text"
-                  required
-                  value={umkmNama}
-                  onChange={(e) => setUmkmNama(e.target.value)}
-                  placeholder="Contoh: Kopi Robusta Lereng Nyurlembang"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Nama Pemilik *</label>
-                  <input
-                    type="text"
-                    required
-                    value={umkmPemilik}
-                    onChange={(e) => setUmkmPemilik(e.target.value)}
-                    placeholder="Nama warga pemilik"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Kategori Usaha</label>
-                  <select
-                    value={umkmKategori}
-                    onChange={(e) => setUmkmKategori(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
-                  >
-                    <option value="Kuliner">Kuliner & Pangan</option>
-                    <option value="Agribisnis">Agribisnis & Aren</option>
-                    <option value="Kerajinan">Kerajinan Ketak</option>
-                    <option value="Jasa">Jasa & Lainnya</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Dusun</label>
-                  <select
-                    value={umkmDusun}
-                    onChange={(e) => setUmkmDusun(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
-                  >
-                    {DAFTAR_DUSUN.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Nomor WhatsApp Aktif</label>
-                  <input
-                    type="text"
-                    value={umkmWa}
-                    onChange={(e) => setUmkmWa(e.target.value)}
-                    placeholder="0819..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Rentang Harga (Rp)</label>
-                <input
-                  type="text"
-                  value={umkmHarga}
-                  onChange={(e) => setUmkmHarga(e.target.value)}
-                  placeholder="Contoh: Rp 25.000 - Rp 50.000 / botol"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Deskripsi Produk / Pemesanan</label>
-                <textarea
-                  rows={2}
-                  value={umkmDeskripsi}
-                  onChange={(e) => setUmkmDeskripsi(e.target.value)}
-                  placeholder="Kelebihan produk, kemasan, atau rute pengiriman..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setShowAddUmkm(false)}
-                  className="px-4 py-2 text-slate-600 font-semibold"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-[#2E7D32] hover:bg-[#256629] text-white rounded-xl font-bold shadow-xs"
-                >
-                  Simpan Produk UMKM
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
