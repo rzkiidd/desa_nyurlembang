@@ -169,8 +169,13 @@ export const KelolaBeritaDesa: React.FC<KelolaBeritaDesaProps> = ({ currentUser 
     const updated = beritaList.filter((b) => b.id !== targetId);
     saveList(updated);
     setConfirmDelete(null);
-    await dbDeleteBerita(targetId);
-    showToast('Artikel berita berhasil dihapus dari database');
+    const res = await dbDeleteBerita(targetId);
+    if (!res.success) {
+      showToast(`Peringatan: ${res.error || 'Gagal menghapus di server'}`);
+    } else {
+      showToast('Artikel berita berhasil dihapus permanen dari database');
+      await loadData();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,10 +198,13 @@ export const KelolaBeritaDesa: React.FC<KelolaBeritaDesaProps> = ({ currentUser 
         gambar_url: gambarUrl,
         penulis: existing?.penulis || currentUser.nama_lengkap,
       };
-      const updated = beritaList.map((b) => (b.id === editingId ? updatedItem : b));
-      saveList(updated);
-      await dbUpdateBerita(updatedItem);
-      showToast('Artikel berita berhasil diperbarui di database');
+      const res = await dbUpdateBerita(updatedItem);
+      if (!res.success) {
+        showToast(`Gagal: ${res.error || 'Gagal memperbarui di server'}`);
+      } else {
+        showToast('Artikel berita berhasil diperbarui di database server');
+        await loadData();
+      }
     } else {
       const baru: BeritaDesa = {
         id: `news-${Date.now()}`,
@@ -210,9 +218,13 @@ export const KelolaBeritaDesa: React.FC<KelolaBeritaDesaProps> = ({ currentUser 
         published_at: new Date().toISOString(),
         status: 'published',
       };
-      saveList([baru, ...beritaList]);
-      await dbInsertBerita(baru);
-      showToast('Artikel berita baru berhasil diterbitkan ke database');
+      const res = await dbInsertBerita(baru);
+      if (!res.success) {
+        showToast(`Gagal: ${res.error || 'Gagal menyimpan di server'}`);
+      } else {
+        showToast('Artikel berita baru berhasil diterbitkan ke database server');
+        await loadData();
+      }
     }
 
     setShowModal(false);
@@ -871,3 +883,4 @@ export const KelolaBeritaDesa: React.FC<KelolaBeritaDesaProps> = ({ currentUser 
     </div>
   );
 };
+ 
