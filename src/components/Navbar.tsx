@@ -158,9 +158,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className={`sticky top-0 bg-white/95 backdrop-blur-md shadow-xs border-b border-slate-200/80 no-print font-sans transition-all ${mobileDrawerOpen ? 'z-[999999]' : 'z-40'}`} ref={navRef}>
-      {/* 1. TOP BAR KEDINASAN RESMI (Telah Dihapus Info Narmada/Lombok Barat Sesuai Arahan) */}
-      <div className="bg-[#0D2A4A] text-slate-100 text-xs py-2 px-4 border-b border-blue-950">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      {/* 1. TOP BAR KEDINASAN RESMI */}
+      <div className="bg-[#0D2A4A] text-slate-100 text-xs py-2 border-b border-blue-950">
+        <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 flex items-center justify-between">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] sm:text-xs">
             <span className="flex items-center gap-1.5 font-semibold text-[#FFB300]">
               <Phone className="w-3.5 h-3.5 text-[#FFB300]" />
@@ -209,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* 2. HEADER CONTAINER (LOGO & NAVIGASI FLOATING DROPDOWN) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-3">
         <div className="flex items-center justify-between">
           {/* Logo & Identitas Desa (Klik 2x untuk membuka Login Staf/Kontributor) */}
           <div
