@@ -1057,29 +1057,35 @@ export async function dbFetchPermohonan(): Promise<PermohonanSurat[]> {
 }
 
 export async function submitPermohonan(
-  data: Omit<PermohonanSurat, 'id' | 'kode_tiket' | 'status' | 'dibuat_pada' | 'riwayat'>
+  data: Omit<PermohonanSurat, 'id' | 'kode_tiket' | 'status' | 'dibuat_pada' | 'riwayat'> & {
+    berkas_tambahan_url?: string;
+  }
 ): Promise<PermohonanSurat> {
   const all = getStoredPermohonan();
   const kodeTiket = generateKodeTiket(all.length);
   const nowIso = new Date().toISOString();
   const id = `perm-${Date.now()}`;
+  const riwayatAwal = [
+    {
+      id: `rw-${Date.now()}`,
+      permohonan_id: id,
+      status: 'Diajukan' as StatusPermohonan,
+      catatan: 'Permohonan surat berhasil diajukan oleh pemohon dan menunggu verifikasi petugas.',
+      diubah_oleh: data.nama_pemohon,
+      created_at: nowIso,
+    },
+  ];
+
+  const berkasPendukung = data.berkas_pendukung_url || data.berkas_tambahan_url || undefined;
 
   const newPermohonan: PermohonanSurat = {
     ...data,
     id,
     kode_tiket: kodeTiket,
+    berkas_pendukung_url: berkasPendukung,
     status: 'Diajukan',
     dibuat_pada: nowIso,
-    riwayat: [
-      {
-        id: `rw-${Date.now()}`,
-        permohonan_id: id,
-        status: 'Diajukan',
-        catatan: 'Permohonan surat berhasil diajukan oleh pemohon dan menunggu verifikasi petugas.',
-        diubah_oleh: data.nama_pemohon,
-        created_at: nowIso,
-      },
-    ],
+    riwayat: riwayatAwal,
   };
 
   const updatedList = [newPermohonan, ...all];
@@ -1087,7 +1093,37 @@ export async function submitPermohonan(
 
   if (supabase) {
     try {
-      await supabase.from('permohonan_surat').insert([newPermohonan]);
+      const dbPayload = {
+        id,
+        kode_tiket: kodeTiket,
+        nik: data.nik,
+        nama_pemohon: data.nama_pemohon,
+        tempat_lahir: data.tempat_lahir,
+        tanggal_lahir: data.tanggal_lahir,
+        jenis_kelamin: data.jenis_kelamin,
+        pekerjaan: data.pekerjaan,
+        agama: data.agama,
+        dusun: data.dusun,
+        alamat_lengkap: data.alamat_lengkap,
+        nomor_whatsapp: data.nomor_whatsapp,
+        jenis_surat_id: data.jenis_surat_id,
+        jenis_surat_nama: data.jenis_surat_nama,
+        keperluan: data.keperluan,
+        data_tambahan: data.data_tambahan || {},
+        berkas_ktp_url: data.berkas_ktp_url || null,
+        berkas_kk_url: data.berkas_kk_url || null,
+        berkas_pas_foto_url: data.berkas_pas_foto_url || null,
+        berkas_pendukung_url: berkasPendukung || null,
+        status: 'Diajukan',
+        dibuat_pada: nowIso,
+        riwayat: riwayatAwal,
+      };
+
+      const { error: insertErr } = await supabase.from('permohonan_surat').insert([dbPayload]);
+      if (insertErr) {
+        console.error('Gagal insert permohonan_surat ke Supabase:', insertErr);
+      }
+
       await supabase.from('riwayat_status_surat').insert([
         {
           id: `rw-${Date.now()}`,
