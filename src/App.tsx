@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, PermohonanSurat, BeritaDesa, PotensiUmkm } from './types';
 import { MOCK_USERS, INITIAL_PERMOHONAN, INITIAL_BERITA, INITIAL_UMKM } from './data/mockData';
-import { syncAllFromSupabase, getStoredBerita } from './lib/supabaseClient';
+import { syncAllFromSupabase, getStoredBerita, getStoredUmkm } from './lib/supabaseClient';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { PublicPortal } from './components/PublicPortal';
@@ -30,10 +30,10 @@ export default function App() {
   >('portal');
 
   // Selected article for news detail view
-  const [selectedBerita, setSelectedBerita] = useState<BeritaDesa>(INITIAL_BERITA[0]);
+  const [selectedBerita, setSelectedBerita] = useState<BeritaDesa>(() => getStoredBerita()[0] || INITIAL_BERITA[0]);
 
   // Selected UMKM for product showcase view
-  const [selectedUmkm, setSelectedUmkm] = useState<PotensiUmkm>(INITIAL_UMKM[0]);
+  const [selectedUmkm, setSelectedUmkm] = useState<PotensiUmkm>(() => getStoredUmkm()[0] || INITIAL_UMKM[0]);
 
   // Sub-section modal or anchor target (tentang-kami, visi-misi, sejarah, geografis, demografi, etc.)
   const [activeSubSection, setActiveSubSection] = useState<string | undefined>(undefined);
@@ -70,9 +70,7 @@ export default function App() {
       const beritaParam = params.get('berita');
       if (beritaParam) {
         const allBerita = getStoredBerita();
-        const found =
-          allBerita.find((b) => b.id === beritaParam) ||
-          INITIAL_BERITA.find((b) => b.id === beritaParam);
+        const found = allBerita.find((b) => b.id === beritaParam);
         if (found) {
           setSelectedBerita(found);
           setCurrentView('detail_berita');
