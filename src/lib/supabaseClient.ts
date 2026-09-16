@@ -462,7 +462,9 @@ export function saveStoredKomentar(list: KomentarBerita[]): void {
 export function getStoredBerita(): BeritaDesa[] {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_BERITA);
-    if (saved) return JSON.parse(saved);
+    if (saved !== null) {
+      return JSON.parse(saved);
+    }
   } catch {}
   return INITIAL_BERITA;
 }
@@ -477,7 +479,9 @@ export function saveStoredBerita(list: BeritaDesa[]): void {
 export function getStoredUmkm(): PotensiUmkm[] {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_UMKM);
-    if (saved) return JSON.parse(saved);
+    if (saved !== null) {
+      return JSON.parse(saved);
+    }
   } catch {}
   return INITIAL_UMKM;
 }
@@ -937,9 +941,10 @@ export async function syncAllFromSupabase(): Promise<{ success: boolean; syncedT
       }),
       // 6. Berita Desa
       supabase.from('berita_desa').select('*').order('published_at', { ascending: false }).then(({ data, error }) => {
-        if (!error && Array.isArray(data) && data.length > 0) {
-          saveStoredBerita(data);
-          synced.push(`berita_desa (${data.length})`);
+        if (!error && Array.isArray(data)) {
+          const active = data.filter((b: any) => !b.is_deleted && b.status !== 'deleted' && !b.deleted_at);
+          saveStoredBerita(active);
+          synced.push(`berita_desa (${active.length})`);
         }
       }),
       // 7. Pengaduan Warga
@@ -992,10 +997,11 @@ export async function syncAllFromSupabase(): Promise<{ success: boolean; syncedT
         }
       }),
       // 14. Potensi UMKM
-      supabase.from('potensi_umkm').select('*').then(({ data, error }) => {
-        if (!error && Array.isArray(data) && data.length > 0) {
-          saveStoredUmkm(data);
-          synced.push(`potensi_umkm (${data.length})`);
+      supabase.from('potensi_umkm').select('*').order('created_at', { ascending: false }).then(({ data, error }) => {
+        if (!error && Array.isArray(data)) {
+          const active = data.filter((u: any) => !u.is_deleted && u.status !== 'deleted' && !u.deleted_at);
+          saveStoredUmkm(active);
+          synced.push(`potensi_umkm (${active.length})`);
         }
       }),
     ];
@@ -1505,9 +1511,12 @@ export async function dbFetchBerita(): Promise<BeritaDesa[]> {
         .from('berita_desa')
         .select('*')
         .order('published_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        saveStoredBerita(data);
-        return data as BeritaDesa[];
+      if (!error && Array.isArray(data)) {
+        const activeData = (data as BeritaDesa[]).filter(
+          (b: any) => !b.is_deleted && b.status !== 'deleted' && !b.deleted_at
+        );
+        saveStoredBerita(activeData);
+        return activeData;
       }
     } catch (e) {
       console.warn('Gagal fetch berita_desa dari Supabase:', e);
@@ -1516,51 +1525,254 @@ export async function dbFetchBerita(): Promise<BeritaDesa[]> {
   return getStoredBerita();
 }
 
-export async function dbInsertBerita(item: BeritaDesa): Promise<void> {
+export async function dbInsertBerita(item: BeritaDesa): Promise<{ success: boolean; data?: BeritaDesa; error?: string }> {
   const all = getStoredBerita();
-  saveStoredBerita([item, ...all]);
+  saveStoredBerita([item, ...all.filter((b) => b.id !== item.id)]);
+
+  let success = true;
+  let errorMsg: string | undefined;
 
   if (supabase) {
     try {
-      await supabase.from('berita_desa').insert([item]);
-    } catch (e) {
-      console.warn('Gagal insert berita_desa di Supabase:', e);
+      const { error, status } = await supabase.from('berita_desa').insert([item]);
+      if (error) {
+        console.error('Gagal insert berita_desa di Supabase:', error);
+        success = false;
+        errorMsg = error.message;
+      } else {
+        console.log(`Berita ${item.id} berhasil ditambahkan ke Supabase (status: ${status})`);
+      }
+    } catch (e: any) {
+      console.error('Exception insert berita_desa di Supabase:', e);
+      success = false;
+      errorMsg = e?.message || 'Gagal menyimpan berita ke server';
     }
   }
 
   await broadcastDataChange('berita_desa', 'insert', item, item.id);
+  return { success, data: item, error: errorMsg };
 }
 
-export async function dbUpdateBerita(item: BeritaDesa): Promise<void> {
+export async function dbUpdateBerita(item: BeritaDesa): Promise<{ success: boolean; data?: BeritaDesa; error?: string }> {
+  if (!item.id) {
+    return { success: false, error: 'ID Berita tidak valid untuk pembaruan' };
+  }
+
   const all = getStoredBerita();
   const updated = all.map((b) => (b.id === item.id ? item : b));
   saveStoredBerita(updated);
 
+  let success = true;
+  let errorMsg: string | undefined;
+
   if (supabase) {
     try {
-      await supabase.from('berita_desa').update(item).eq('id', item.id);
-    } catch (e) {
-      console.warn('Gagal update berita_desa di Supabase:', e);
+      const { error, status } = await supabase
+        .from('berita_desa')
+        .update(item)
+        .eq('id', item.id);
+      if (error) {
+        console.error('Gagal update berita_desa di Supabase:', error);
+        success = false;
+        errorMsg = error.message;
+      } else {
+        console.log(`Berita ${item.id} berhasil diperbarui di Supabase (status: ${status})`);
+      }
+    } catch (e: any) {
+      console.error('Exception update berita_desa di Supabase:', e);
+      success = false;
+      errorMsg = e?.message || 'Gagal memperbarui berita di server';
     }
   }
 
   await broadcastDataChange('berita_desa', 'update', item, item.id);
+  return { success, data: item, error: errorMsg };
 }
 
-export async function dbDeleteBerita(id: string): Promise<void> {
+export async function dbDeleteBerita(id: string): Promise<{ success: boolean; error?: string }> {
+  if (!id) return { success: false, error: 'ID Berita tidak valid' };
+
   const all = getStoredBerita();
   const updated = all.filter((b) => b.id !== id);
   saveStoredBerita(updated);
 
+  let success = true;
+  let errorMsg: string | undefined;
+
   if (supabase) {
     try {
-      await supabase.from('berita_desa').delete().eq('id', id);
-    } catch (e) {
-      console.warn('Gagal delete berita_desa di Supabase:', e);
+      const { error, status } = await supabase.from('berita_desa').delete().eq('id', id);
+      if (error) {
+        console.error('Gagal delete berita_desa di Supabase:', error);
+        success = false;
+        errorMsg = error.message;
+      } else {
+        console.log(`Berita ${id} berhasil dihapus permanen dari Supabase (status: ${status})`);
+      }
+    } catch (e: any) {
+      console.error('Exception delete berita_desa di Supabase:', e);
+      success = false;
+      errorMsg = e?.message || 'Gagal menghapus berita';
     }
   }
 
   await broadcastDataChange('berita_desa', 'delete', undefined, id);
+  return { success, error: errorMsg };
+}
+
+// 8b. POTENSI UMKM DESA (CRUD LENGKAP & SINKRONISASI SUPABASE)
+export async function dbFetchUmkm(): Promise<PotensiUmkm[]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('potensi_umkm')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        const activeData = data.filter((u: any) => !u.is_deleted && u.status !== 'deleted' && !u.deleted_at);
+        saveStoredUmkm(activeData as PotensiUmkm[]);
+        return activeData as PotensiUmkm[];
+      }
+    } catch (e) {
+      console.warn('Gagal fetch potensi_umkm dari Supabase:', e);
+    }
+  }
+  return getStoredUmkm();
+}
+
+export async function dbInsertUmkm(item: PotensiUmkm): Promise<{ success: boolean; data?: PotensiUmkm; error?: string }> {
+  const payload = {
+    id: item.id || `umkm-${Date.now()}`,
+    nama_usaha: item.nama_usaha.trim(),
+    pemilik: item.pemilik.trim(),
+    kategori: item.kategori || 'Kuliner',
+    dusun: item.dusun || 'Dusun Nyurlembang Daye',
+    deskripsi: item.deskripsi.trim(),
+    harga_rentang: item.harga_rentang || 'Rp 15.000 - Rp 50.000',
+    kontak_wa: item.kontak_wa.trim(),
+    foto_url: item.foto_url || 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80',
+    created_at: new Date().toISOString(),
+  };
+
+  let success = true;
+  let errorMsg: string | undefined;
+  let returnedData: PotensiUmkm = payload as unknown as PotensiUmkm;
+
+  if (supabase) {
+    try {
+      const { data, error, status } = await supabase
+        .from('potensi_umkm')
+        .insert([payload])
+        .select();
+      if (error) {
+        console.error('Gagal insert potensi_umkm ke Supabase:', error);
+        success = false;
+        errorMsg = error.message;
+      } else if (status >= 200 && status < 300) {
+        if (data && data[0]) {
+          returnedData = data[0];
+        }
+      }
+    } catch (e: any) {
+      console.error('Exception insert potensi_umkm:', e);
+      success = false;
+      errorMsg = e?.message || 'Gagal menyimpan UMKM ke server';
+    }
+  }
+
+  const all = getStoredUmkm();
+  saveStoredUmkm([returnedData, ...all.filter((u) => u.id !== returnedData.id)]);
+  await broadcastDataChange('potensi_umkm', 'insert', returnedData, returnedData.id);
+
+  return { success, data: returnedData, error: errorMsg };
+}
+
+export async function dbUpdateUmkm(item: PotensiUmkm): Promise<{ success: boolean; data?: PotensiUmkm; error?: string }> {
+  if (!item.id) {
+    return { success: false, error: 'ID UMKM tidak valid untuk pembaruan.' };
+  }
+
+  const payload: Partial<PotensiUmkm> = {
+    nama_usaha: item.nama_usaha.trim(),
+    pemilik: item.pemilik.trim(),
+    kategori: item.kategori,
+    dusun: item.dusun,
+    deskripsi: item.deskripsi.trim(),
+    harga_rentang: item.harga_rentang,
+    kontak_wa: item.kontak_wa.trim(),
+    foto_url: item.foto_url,
+  };
+
+  let success = true;
+  let errorMsg: string | undefined;
+  let updatedRecord: PotensiUmkm = { ...item, ...payload };
+
+  if (supabase) {
+    try {
+      const { data, error, status } = await supabase
+        .from('potensi_umkm')
+        .update(payload)
+        .eq('id', item.id)
+        .select();
+
+      if (error) {
+        console.error('Gagal update potensi_umkm di Supabase:', error);
+        success = false;
+        errorMsg = error.message;
+      } else if (status >= 200 && status < 300) {
+        if (data && data[0]) {
+          updatedRecord = data[0];
+        }
+      } else {
+        success = false;
+        errorMsg = `Server merespons status ${status}`;
+      }
+    } catch (e: any) {
+      console.error('Exception update potensi_umkm:', e);
+      success = false;
+      errorMsg = e?.message || 'Gagal memperbarui UMKM di server';
+    }
+  }
+
+  const all = getStoredUmkm();
+  const updatedList = all.map((u) => (u.id === item.id ? updatedRecord : u));
+  saveStoredUmkm(updatedList);
+  await broadcastDataChange('potensi_umkm', 'update', updatedRecord, item.id);
+
+  return { success, data: updatedRecord, error: errorMsg };
+}
+
+export async function dbDeleteUmkm(id: string): Promise<{ success: boolean; error?: string }> {
+  if (!id) return { success: false, error: 'ID UMKM tidak valid' };
+
+  let success = true;
+  let errorMsg: string | undefined;
+
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('potensi_umkm')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Gagal delete potensi_umkm di Supabase:', error);
+        success = false;
+        errorMsg = error.message;
+      }
+    } catch (e: any) {
+      console.error('Exception delete potensi_umkm:', e);
+      success = false;
+      errorMsg = e?.message || 'Gagal menghapus UMKM di database';
+    }
+  }
+
+  const all = getStoredUmkm();
+  const updated = all.filter((u) => u.id !== id);
+  saveStoredUmkm(updated);
+  await broadcastDataChange('potensi_umkm', 'delete', undefined, id);
+
+  return { success, error: errorMsg };
 }
 
 // 9. GALERI KEGIATAN
