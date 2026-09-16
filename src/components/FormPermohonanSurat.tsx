@@ -310,8 +310,8 @@ export const FormPermohonanSurat: React.FC<FormPermohonanSuratProps> = ({ onSucc
         berkas_ktp_url: ktpDoc.dataUrl || `dokumen-persyaratan/ktp_${formData.nik}.jpg`,
         berkas_kk_url: kkDoc.dataUrl || `dokumen-persyaratan/kk_${formData.nik}.jpg`,
         berkas_pas_foto_url: pasFotoDoc.dataUrl || (pasFotoDoc.name ? `dokumen-persyaratan/pas_foto_${formData.nik}.jpg` : undefined),
-        berkas_tambahan_url: tambahanDoc.dataUrl || (tambahanDoc.name ? `dokumen-persyaratan/lampiran_${formData.nik}.jpg` : undefined),
-      } as any);
+        berkas_pendukung_url: tambahanDoc.dataUrl || (tambahanDoc.name ? `dokumen-persyaratan/lampiran_${formData.nik}.jpg` : undefined),
+      });
 
       setSubmittedData(res);
       setStep(4);
