@@ -638,11 +638,20 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-[#EEF2F6] flex flex-row relative">
-      {/* Toast Notification */}
+      {/* Toast Notification Floating di Bawah (Aman dari Top Header & Navbar Mobile) */}
       {feedbackMsg && (
-        <div className="fixed top-4 right-4 z-50 p-4 bg-[#0D2A4A] text-white rounded-2xl shadow-2xl border border-blue-800 flex items-center gap-2 text-xs font-bold animate-in fade-in zoom-in">
-          <CheckCircle2 className="w-5 h-5 text-[#FFB300]" />
-          <span>{feedbackMsg}</span>
+        <div className="fixed bottom-5 right-4 left-4 sm:left-auto sm:right-6 sm:max-w-md z-[999999] p-3.5 sm:p-4 bg-[#0D2A4A]/95 backdrop-blur-md text-white rounded-2xl shadow-2xl border border-blue-800/80 flex items-center justify-between gap-3 text-xs font-bold animate-in fade-in slide-in-from-bottom-5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
+            <span className="leading-snug truncate">{feedbackMsg}</span>
+          </div>
+          <button
+            onClick={() => setFeedbackMsg(null)}
+            className="p-1 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white shrink-0 cursor-pointer"
+            aria-label="Tutup notifikasi"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -904,10 +913,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       ========================================================================= */}
       {activeTab === 'antrean' && (
         <div className="space-y-6">
-          {/* Quick Filter Status Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {/* Quick Filter Status Bar - Kompak 2 Kolom di Mobile */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
             {[
-              { label: 'Semua Status', val: 'all', count: permohonanList.length, color: 'border-slate-300' },
+              { label: 'Semua Status', val: 'all', count: permohonanList.length, color: 'border-slate-300 bg-white' },
               { label: 'Diajukan', val: 'Diajukan', count: permohonanList.filter((p) => p.status === 'Diajukan').length, color: 'border-amber-400 text-amber-900 bg-amber-50/50' },
               { label: 'Diverifikasi & Cetak', val: 'Diverifikasi & Dicetak', count: permohonanList.filter((p) => p.status === 'Diverifikasi & Dicetak').length, color: 'border-blue-400 text-[#1565C0] bg-blue-50/50' },
               { label: 'Siap Diambil', val: 'Siap Diambil', count: permohonanList.filter((p) => p.status === 'Siap Diambil').length, color: 'border-emerald-400 text-[#2E7D32] bg-emerald-50/50' },
@@ -916,12 +925,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               <button
                 key={f.val}
                 onClick={() => setFilterStatus(f.val)}
-                className={`p-3.5 rounded-2xl border text-left transition-all ${f.color} ${
+                className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all ${f.color} ${
+                  f.val === 'Selesai' ? 'col-span-2 sm:col-span-1' : ''
+                } ${
                   filterStatus === f.val ? 'ring-2 ring-[#1565C0] shadow-xs' : 'opacity-85 hover:opacity-100'
                 }`}
               >
-                <div className="text-[11px] font-semibold text-slate-500">{f.label}</div>
-                <div className="text-xl font-bold font-heading mt-1">{f.count}</div>
+                <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 truncate">{f.label}</div>
+                <div className="text-base sm:text-xl font-bold font-heading mt-0.5 sm:mt-1">{f.count}</div>
               </button>
             ))}
           </div>
@@ -2956,7 +2967,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           TAB: KELOLA PENGADUAN & ASPIRASI WARGA
       ========================================================================= */}
       {activeTab === 'kelola_pengaduan' && (
-        <div className="card-kedinasan p-6">
+        <div className="card-kedinasan p-3 sm:p-6 max-w-full overflow-hidden">
           <KelolaPengaduanWarga currentUser={currentUser} />
         </div>
       )}
