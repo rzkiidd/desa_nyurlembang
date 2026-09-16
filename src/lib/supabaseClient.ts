@@ -13,7 +13,8 @@ import {
   ProdukHukumDesa,
   PengaduanWargaItem,
   KomentarBerita,
-  BeritaDesa
+  BeritaDesa,
+  PotensiUmkm
 } from '../types';
 import {
   INITIAL_PERMOHONAN,
@@ -28,7 +29,8 @@ import {
   INITIAL_PRODUK_HUKUM,
   INITIAL_PENGADUAN_WARGA,
   INITIAL_KOMENTAR_BERITA,
-  INITIAL_BERITA
+  INITIAL_BERITA,
+  INITIAL_UMKM
 } from '../data/mockData';
 
 // ============================================================================
@@ -100,6 +102,7 @@ const STORAGE_KEY_PRODUK_HUKUM = 'sid_nyurlembang_produk_hukum_v1';
 const STORAGE_KEY_PENGADUAN = 'desa_pengaduan_list';
 const STORAGE_KEY_KOMENTAR = 'desa_komentar_berita';
 const STORAGE_KEY_BERITA = 'desa_berita_list';
+const STORAGE_KEY_UMKM = 'desa_umkm_list';
 
 // Helper aman untuk background upsert ke Supabase
 async function safeUpsert(table: string, data: any): Promise<void> {
@@ -233,8 +236,8 @@ export function getStoredPengaturanDesa(): PengaturanDesa {
     kop_baris2: 'KECAMATAN NARMADA',
     kop_baris3: 'KANTOR KEPALA DESA NYURLEMBANG',
     format_nomor_surat: '470/[REG]/Des-NL/[BULAN_ROMAWI]/[TAHUN]',
-    pejabat_penandatangan_nama: 'H. MUHAMMAD RIDWAN, S.Pd.I',
-    pejabat_penandatangan_nipd: '19750812 200801 1 004',
+    pejabat_penandatangan_nama: 'H. Wardi, S.AP',
+    pejabat_penandatangan_nipd: '19750812 200501 1 003',
     pejabat_penandatangan_jabatan: 'Kepala Desa Nyurlembang',
   };
   const targetMapUrl = 'https://maps.google.com/maps?q=-8.58922199365014,116.19106227542514&hl=id&z=15&output=embed';
@@ -470,6 +473,21 @@ export function saveStoredBerita(list: BeritaDesa[]): void {
   } catch {}
 }
 
+// 13. POTENSI UMKM DESA
+export function getStoredUmkm(): PotensiUmkm[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_UMKM);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return INITIAL_UMKM;
+}
+
+export function saveStoredUmkm(list: PotensiUmkm[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_UMKM, JSON.stringify(list));
+  } catch {}
+}
+
 // 13. USER MANAGEMENT & SESSIONS
 export function getCurrentUser(): UserProfile | null {
   try {
@@ -637,6 +655,15 @@ export function applyMutationToCache(
         const updated = exists ? all.map((u) => (u.id === data.id ? { ...u, ...data } : u)) : [...all, data];
         saveStoredUsers(updated);
       }
+    } else if (table === 'potensi_umkm') {
+      const all = getStoredUmkm();
+      if (action === 'delete' && targetId) {
+        saveStoredUmkm(all.filter((u) => u.id !== targetId));
+      } else if (data) {
+        const exists = all.some((u) => u.id === data.id);
+        const updated = exists ? all.map((u) => (u.id === data.id ? { ...u, ...data } : u)) : [data, ...all];
+        saveStoredUmkm(updated);
+      }
     }
   } catch (err) {
     console.warn('Gagal memperbarui cache lokal dari realtime:', err);
@@ -733,6 +760,7 @@ if (realtimeChannel) {
     'produk_hukum',
     'galeri_kegiatan',
     'profiles',
+    'potensi_umkm',
   ];
 
   TABLES_CDC.forEach((t) => {
@@ -871,130 +899,110 @@ export async function syncAllFromSupabase(): Promise<{ success: boolean; syncedT
   const synced: string[] = [];
 
   try {
-    // 1. Sinkronisasi Pengaturan Desa
-    const { data: pengaturanData, error: errPengaturan } = await supabase
-      .from('pengaturan_desa')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
+    const tasks = [
+      // 1. Pengaturan Desa
+      supabase.from('pengaturan_desa').select('*').limit(1).maybeSingle().then(({ data, error }) => {
+        if (!error && data) {
+          saveStoredPengaturanDesa(data);
+          synced.push('pengaturan_desa');
+        }
+      }),
+      // 2. Permohonan Surat
+      supabase.from('permohonan_surat').select('*').order('dibuat_pada', { ascending: false }).then(({ data, error }) => {
+        if (!error && Array.isArray(data)) {
+          savePermohonanList(data);
+          synced.push(`permohonan_surat (${data.length})`);
+        }
+      }),
+      // 3. Jenis Surat
+      supabase.from('jenis_surat').select('*').order('urutan', { ascending: true }).then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredJenisSurat(data);
+          synced.push(`jenis_surat (${data.length})`);
+        }
+      }),
+      // 4. Pejabat Desa
+      supabase.from('pejabat_desa').select('*').order('urutan', { ascending: true }).then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredPejabatDesa(data);
+          synced.push(`pejabat_desa (${data.length})`);
+        }
+      }),
+      // 5. Banner Slides
+      supabase.from('banner_slides').select('*').order('urutan', { ascending: true }).then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredBannerSlides(data);
+          synced.push(`banner_slides (${data.length})`);
+        }
+      }),
+      // 6. Berita Desa
+      supabase.from('berita_desa').select('*').order('published_at', { ascending: false }).then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredBerita(data);
+          synced.push(`berita_desa (${data.length})`);
+        }
+      }),
+      // 7. Pengaduan Warga
+      supabase.from('pengaduan_warga').select('*').order('tanggal', { ascending: false }).then(({ data, error }) => {
+        if (!error && Array.isArray(data)) {
+          saveStoredPengaduan(data);
+          synced.push(`pengaduan_warga (${data.length})`);
+        }
+      }),
+      // 8. Produk Hukum
+      supabase.from('produk_hukum').select('*').order('tahun', { ascending: false }).then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredProdukHukum(data);
+          synced.push(`produk_hukum (${data.length})`);
+        }
+      }),
+      // 9. Galeri Kegiatan
+      supabase.from('galeri_kegiatan').select('*').order('tanggal', { ascending: false }).then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredGaleriKegiatan(data);
+          synced.push(`galeri_kegiatan (${data.length})`);
+        }
+      }),
+      // 10. Komentar Berita
+      supabase.from('komentar_berita').select('*').order('created_at', { ascending: false }).then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredKomentar(data);
+          synced.push(`komentar_berita (${data.length})`);
+        }
+      }),
+      // 11. Profiles / Users
+      supabase.from('profiles').select('*').then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredUsers(data);
+          synced.push(`profiles (${data.length})`);
+        }
+      }),
+      // 12. Transparansi APBDes
+      supabase.from('transparansi_apbdes').select('*').limit(1).maybeSingle().then(({ data, error }) => {
+        if (!error && data) {
+          saveStoredApbdes(data);
+          synced.push('transparansi_apbdes');
+        }
+      }),
+      // 13. Statistik Desa
+      supabase.from('statistik_desa').select('*').limit(1).maybeSingle().then(({ data, error }) => {
+        if (!error && data) {
+          saveStoredStatistikDesa(data);
+          synced.push('statistik_desa');
+        }
+      }),
+      // 14. Potensi UMKM
+      supabase.from('potensi_umkm').select('*').then(({ data, error }) => {
+        if (!error && Array.isArray(data) && data.length > 0) {
+          saveStoredUmkm(data);
+          synced.push(`potensi_umkm (${data.length})`);
+        }
+      }),
+    ];
 
-    if (!errPengaturan && pengaturanData) {
-      saveStoredPengaturanDesa(pengaturanData);
-      synced.push('pengaturan_desa');
-    }
+    await Promise.allSettled(tasks);
 
-    // 2. Sinkronisasi Permohonan Surat
-    const { data: permohonanData, error: errPermohonan } = await supabase
-      .from('permohonan_surat')
-      .select('*')
-      .order('dibuat_pada', { ascending: false });
-
-    if (!errPermohonan && Array.isArray(permohonanData)) {
-      if (permohonanData.length > 0) {
-        savePermohonanList(permohonanData);
-      }
-      synced.push(`permohonan_surat (${permohonanData.length})`);
-    }
-
-    // 3. Sinkronisasi Jenis Surat
-    const { data: jenisData, error: errJenis } = await supabase
-      .from('jenis_surat')
-      .select('*')
-      .order('urutan', { ascending: true });
-
-    if (!errJenis && Array.isArray(jenisData) && jenisData.length > 0) {
-      saveStoredJenisSurat(jenisData);
-      synced.push(`jenis_surat (${jenisData.length})`);
-    }
-
-    // 4. Sinkronisasi Pejabat Desa
-    const { data: pejabatData, error: errPejabat } = await supabase
-      .from('pejabat_desa')
-      .select('*')
-      .order('urutan', { ascending: true });
-
-    if (!errPejabat && Array.isArray(pejabatData) && pejabatData.length > 0) {
-      saveStoredPejabatDesa(pejabatData);
-      synced.push(`pejabat_desa (${pejabatData.length})`);
-    }
-
-    // 5. Sinkronisasi Banner Slides
-    const { data: bannerData, error: errBanner } = await supabase
-      .from('banner_slides')
-      .select('*')
-      .order('urutan', { ascending: true });
-
-    if (!errBanner && Array.isArray(bannerData) && bannerData.length > 0) {
-      saveStoredBannerSlides(bannerData);
-      synced.push(`banner_slides (${bannerData.length})`);
-    }
-
-    // 6. Sinkronisasi Berita Desa
-    const { data: beritaData, error: errBerita } = await supabase
-      .from('berita_desa')
-      .select('*')
-      .order('published_at', { ascending: false });
-
-    if (!errBerita && Array.isArray(beritaData) && beritaData.length > 0) {
-      saveStoredBerita(beritaData);
-      synced.push(`berita_desa (${beritaData.length})`);
-    }
-
-    // 7. Sinkronisasi Pengaduan Warga
-    const { data: pengaduanData, error: errPengaduan } = await supabase
-      .from('pengaduan_warga')
-      .select('*')
-      .order('tanggal', { ascending: false });
-
-    if (!errPengaduan && Array.isArray(pengaduanData) && pengaduanData.length > 0) {
-      saveStoredPengaduan(pengaduanData);
-      synced.push(`pengaduan_warga (${pengaduanData.length})`);
-    }
-
-    // 8. Sinkronisasi Produk Hukum
-    const { data: produkData, error: errProduk } = await supabase
-      .from('produk_hukum')
-      .select('*')
-      .order('tahun', { ascending: false });
-
-    if (!errProduk && Array.isArray(produkData) && produkData.length > 0) {
-      saveStoredProdukHukum(produkData);
-      synced.push(`produk_hukum (${produkData.length})`);
-    }
-
-    // 9. Sinkronisasi Galeri Kegiatan
-    const { data: galeriData, error: errGaleri } = await supabase
-      .from('galeri_kegiatan')
-      .select('*')
-      .order('tanggal', { ascending: false });
-
-    if (!errGaleri && Array.isArray(galeriData) && galeriData.length > 0) {
-      saveStoredGaleriKegiatan(galeriData);
-      synced.push(`galeri_kegiatan (${galeriData.length})`);
-    }
-
-    // 10. Sinkronisasi Komentar Berita
-    const { data: komentarData, error: errKomentar } = await supabase
-      .from('komentar_berita')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!errKomentar && Array.isArray(komentarData) && komentarData.length > 0) {
-      saveStoredKomentar(komentarData);
-      synced.push(`komentar_berita (${komentarData.length})`);
-    }
-
-    // 11. Sinkronisasi Profiles / Users
-    const { data: usersData, error: errUsers } = await supabase
-      .from('profiles')
-      .select('*');
-
-    if (!errUsers && Array.isArray(usersData) && usersData.length > 0) {
-      saveStoredUsers(usersData);
-      synced.push(`profiles (${usersData.length})`);
-    }
-
-    // Beritahu semua komponen aktif bahwa data telah disinkronkan
+    // Beritahu semua komponen aktif bahwa data telah disinkronkan langsung
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('desa_realtime_change', {
@@ -1010,12 +1018,10 @@ export async function syncAllFromSupabase(): Promise<{ success: boolean; syncedT
   }
 }
 
-// Jalankan initial sync saat aplikasi dimuat
+// Jalankan initial sync secara langsung saat aplikasi dimuat (Cold-start instant fetch)
 if (typeof window !== 'undefined' && isSupabaseConfigured && !hasTriggeredInitialSync) {
   hasTriggeredInitialSync = true;
-  setTimeout(() => {
-    syncAllFromSupabase().catch(() => {});
-  }, 1000);
+  syncAllFromSupabase().catch(() => {});
 }
 
 // ============================================================================
@@ -1697,7 +1703,7 @@ export async function dbFetchPengaduan(): Promise<PengaduanWargaItem[]> {
         .from('pengaduan_warga')
         .select('*')
         .order('tanggal', { ascending: false });
-      if (!error && data && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         saveStoredPengaduan(data);
         return data as PengaduanWargaItem[];
       }
