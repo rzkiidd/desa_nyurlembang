@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, PermohonanSurat, BeritaDesa, PotensiUmkm } from './types';
 import { MOCK_USERS, INITIAL_PERMOHONAN, INITIAL_BERITA, INITIAL_UMKM } from './data/mockData';
-import { syncAllFromSupabase } from './lib/supabaseClient';
+import { syncAllFromSupabase, getStoredBerita } from './lib/supabaseClient';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { PublicPortal } from './components/PublicPortal';
@@ -61,9 +61,32 @@ export default function App() {
     setCurrentView('pelacakan');
   };
 
-  // Trigger instant synchronization on initial app load
+  // Trigger instant synchronization on initial app load and handle deep link URLs
   useEffect(() => {
     syncAllFromSupabase().catch(() => {});
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const beritaParam = params.get('berita');
+      if (beritaParam) {
+        const allBerita = getStoredBerita();
+        const found =
+          allBerita.find((b) => b.id === beritaParam) ||
+          INITIAL_BERITA.find((b) => b.id === beritaParam);
+        if (found) {
+          setSelectedBerita(found);
+          setCurrentView('detail_berita');
+        }
+      }
+
+      const tiketParam = params.get('tiket');
+      if (tiketParam) {
+        setInitialTrackingCode(tiketParam);
+        setCurrentView('pelacakan');
+      }
+    } catch {
+      // Browser environment guard
+    }
   }, []);
 
   return (
@@ -106,6 +129,13 @@ export default function App() {
             onClearSubSection={() => setActiveSubSection(undefined)}
             onSelectBerita={(berita) => {
               setSelectedBerita(berita);
+              try {
+                if (window.history.replaceState) {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('berita', berita.id);
+                  window.history.replaceState({}, '', url.toString());
+                }
+              } catch {}
               setCurrentView('detail_berita');
             }}
             onSelectUmkm={(umkm) => {
@@ -137,7 +167,20 @@ export default function App() {
         {currentView === 'detail_berita' && (
           <DetailBerita
             berita={selectedBerita}
-            onBack={() => setCurrentView('portal')}
+            onBack={() => {
+              try {
+                if (window.history.replaceState) {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('berita');
+                  window.history.replaceState(
+                    {},
+                    '',
+                    url.pathname + (url.search ? url.search : '')
+                  );
+                }
+              } catch {}
+              setCurrentView('portal');
+            }}
           />
         )}
 
