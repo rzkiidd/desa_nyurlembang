@@ -179,15 +179,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     nama: string;
   } | null>(null);
 
-  const loadAllData = async () => {
-    // 1. Tampilkan data dari cache lokal secara instan
-    setPermohonanList(getStoredPermohonan());
-    setJenisSuratList(getStoredJenisSurat());
-    setPejabatList(getStoredPejabatDesa());
-    setBannerList(getStoredBannerSlides());
-    setPengaturan(getStoredPengaturanDesa());
-
-    // 2. Ambil data terbaru langsung dari database Supabase (agar sinkron antar-komputer)
+  const refreshRemoteData = async () => {
+    // Ambil data terbaru langsung dari database Supabase (agar sinkron antar-komputer)
     try {
       const [freshPermohonan, freshJenis, freshPejabat, freshBanner, freshPengaturan] = await Promise.allSettled([
         dbFetchPermohonan(),
@@ -218,14 +211,21 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   };
 
   useEffect(() => {
-    loadAllData();
+    // 1. Tampilkan data dari cache lokal secara instan pada initial mount
+    setPermohonanList(getStoredPermohonan());
+    setJenisSuratList(getStoredJenisSurat());
+    setPejabatList(getStoredPejabatDesa());
+    setBannerList(getStoredBannerSlides());
+    setPengaturan(getStoredPengaturanDesa());
+    // 2. Ambil data terbaru dari server tanpa flash
+    refreshRemoteData();
   }, []);
 
   // Sinkronisasi Realtime: Perubahan di Komputer A langsung tercermin di Komputer B, C, D
   useRealtimeSync(
     ['permohonan_surat', 'jenis_surat', 'pejabat_desa', 'banner_slides', 'pengaturan_desa', 'transparansi_apbdes'],
     (event) => {
-      loadAllData();
+      refreshRemoteData();
       if (event.source === 'remote') {
         showNotification(`⚡ Data ${event.table.replace('_', ' ')} diperbarui langsung dari komputer lain!`);
       }
@@ -252,7 +252,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         catatanPetugas,
         currentUser.nama_lengkap || 'Staf Pelayanan'
       );
-      loadAllData();
+      await refreshRemoteData();
       setSelectedPermohonan(null);
       setCatatanPetugas('');
       showNotification('Status permohonan berhasil diperbarui!');
@@ -708,7 +708,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         {/* User Profile Info Card */}
         <div className="px-4 py-3 border-b border-white/5 bg-white/5 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
             <span className="text-[11px] font-bold text-slate-200 truncate">
               {currentUser.nama_lengkap}
             </span>
