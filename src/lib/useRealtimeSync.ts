@@ -17,10 +17,10 @@ export interface RealtimeChangeEvent {
 export function useRealtimeSync(
   tables: string | string[],
   onUpdate: (event: RealtimeChangeEvent) => void,
-  debounceMs: number = 200
+  debounceMs: number = 300
 ) {
-  const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
-  const [syncCount, setSyncCount] = useState<number>(0);
+  const lastSyncTimeRef = useRef<Date>(new Date());
+  const syncCountRef = useRef<number>(0);
   const onUpdateRef = useRef(onUpdate);
   const debounceTimerRef = useRef<any>(null);
 
@@ -33,8 +33,8 @@ export function useRealtimeSync(
     const tableList = Array.isArray(tables) ? tables : [tables];
 
     const triggerUpdate = (ev: RealtimeChangeEvent) => {
-      setLastSyncTime(new Date());
-      setSyncCount((prev) => prev + 1);
+      lastSyncTimeRef.current = new Date();
+      syncCountRef.current += 1;
 
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
@@ -70,20 +70,9 @@ export function useRealtimeSync(
       }
     };
 
-    // 3. Sinkronisasi otomatis saat jendela kembali aktif (Window Focus)
-    const handleWindowFocus = () => {
-      triggerUpdate({
-        table: tableList[0] || 'all',
-        action: 'sync',
-        source: 'remote',
-        timestamp: Date.now(),
-      });
-    };
-
     if (typeof window !== 'undefined') {
       window.addEventListener('desa_realtime_change', handleRealtimeChange);
       window.addEventListener('storage', handleStorageChange);
-      window.addEventListener('focus', handleWindowFocus);
     }
 
     return () => {
@@ -93,10 +82,9 @@ export function useRealtimeSync(
       if (typeof window !== 'undefined') {
         window.removeEventListener('desa_realtime_change', handleRealtimeChange);
         window.removeEventListener('storage', handleStorageChange);
-        window.removeEventListener('focus', handleWindowFocus);
       }
     };
   }, [JSON.stringify(tables), debounceMs]);
 
-  return { lastSyncTime, syncCount };
+  return { lastSyncTime: lastSyncTimeRef.current, syncCount: syncCountRef.current };
 }
