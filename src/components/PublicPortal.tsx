@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PROFIL_DESA, INITIAL_BERITA, INITIAL_UMKM, DAFTAR_DUSUN } from '../data/mockData';
+import { PROFIL_DESA, DAFTAR_DUSUN } from '../data/mockData';
 import {
   getStoredBannerSlides,
   getStoredPejabatDesa,
@@ -9,6 +9,10 @@ import {
   getStoredGaleriKegiatan,
   getStoredStatistikDesa,
   getStoredProdukHukum,
+  getStoredBerita,
+  dbFetchBerita,
+  getStoredUmkm,
+  dbFetchUmkm,
   lacakPermohonan,
   getStoredPermohonan
 } from '../lib/supabaseClient';
@@ -84,6 +88,8 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
   const [galeriList, setGaleriList] = useState<GaleriKegiatan[]>([]);
   const [statistik, setStatistik] = useState<StatistikDesa>(getStoredStatistikDesa());
   const [produkHukumList, setProdukHukumList] = useState<ProdukHukumDesa[]>([]);
+  const [beritaList, setBeritaList] = useState<BeritaDesa[]>(getStoredBerita());
+  const [umkmList, setUmkmList] = useState<PotensiUmkm[]>(getStoredUmkm());
   const [showAllUmkmModal, setShowAllUmkmModal] = useState(false);
   const [umkmSearch, setUmkmSearch] = useState('');
   const [umkmCategoryFilter, setUmkmCategoryFilter] = useState('Semua');
@@ -119,7 +125,7 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
   const activePerangkatList = perangkatDesaList.length > 0 ? perangkatDesaList : pejabatList;
   const currentPejabat = activePerangkatList.length > 0 ? activePerangkatList[pejabatIndex % activePerangkatList.length] : null;
 
-  const reloadData = () => {
+  const reloadData = async () => {
     setBanners(getStoredBannerSlides().filter((b) => b.aktif));
     setPejabatList(getStoredPejabatDesa().sort((a, b) => a.urutan - b.urutan));
     setPengaturan(getStoredPengaturanDesa());
@@ -128,6 +134,19 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
     setGaleriList(getStoredGaleriKegiatan());
     setStatistik(getStoredStatistikDesa());
     setProdukHukumList(getStoredProdukHukum());
+    setBeritaList(getStoredBerita());
+    setUmkmList(getStoredUmkm());
+
+    try {
+      const [remoteBerita, remoteUmkm] = await Promise.all([
+        dbFetchBerita(),
+        dbFetchUmkm(),
+      ]);
+      if (Array.isArray(remoteBerita)) setBeritaList(remoteBerita);
+      if (Array.isArray(remoteUmkm)) setUmkmList(remoteUmkm);
+    } catch (e) {
+      console.warn('Gagal sinkron remote di PublicPortal:', e);
+    }
   };
 
   // Load data on mount & Dengarkan update database secara realtime
@@ -229,9 +248,9 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
     }
   };
 
-  // Featured and Side articles for magazine layout
-  const featuredNews = INITIAL_BERITA[0];
-  const sideNews = INITIAL_BERITA.slice(1, 3);
+  // Featured and Side articles for magazine layout (diambil dari state database berita)
+  const featuredNews = beritaList.length > 0 ? beritaList[0] : null;
+  const sideNews = beritaList.length > 1 ? beritaList.slice(1, 3) : [];
 
   return (
     <div className="space-y-10 pb-16 bg-[#EEF2F6]">
@@ -535,113 +554,121 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
               </div>
 
               {/* Magazine Layout: 1 Berita Utama (Kiri/Besar) + 2 Berita Pendamping (Kanan) */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-                {/* Berita Utama (Kiri, 7 Kolom) */}
-                {featuredNews && (
-                  <article
-                    onClick={() => onSelectBerita && onSelectBerita(featuredNews)}
-                    className="md:col-span-7 bg-slate-50/50 rounded-xl overflow-hidden border border-slate-200/80 flex flex-col justify-between hover:border-[#1565C0] transition-all cursor-pointer group hover:shadow-md"
-                  >
-                    <div className="relative h-48 sm:h-56 bg-slate-100 overflow-hidden">
-                      <img
-                        src={featuredNews.gambar_url}
-                        alt={featuredNews.judul}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <span className="absolute top-3 left-3 px-2.5 py-1 bg-[#0D2A4A]/90 text-white text-[10px] font-bold rounded-md">
-                        {featuredNews.kategori}
-                      </span>
-                    </div>
-
-                    <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
-                      <div>
-                        <div className="text-[11px] text-slate-400 flex items-center gap-2 mb-1.5">
-                          <Calendar className="w-3 h-3" />
-                          <span>
-                            {new Date(featuredNews.published_at).toLocaleDateString('id-ID', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric'
-                            })}
-                          </span>
-                          <span>•</span>
-                          <span>{featuredNews.penulis}</span>
-                        </div>
-                        <h3 className="font-heading font-bold text-[#0D2A4A] text-base leading-snug group-hover:text-[#1565C0] transition-colors">
-                          {featuredNews.judul}
-                        </h3>
-                        <p className="text-xs text-slate-600 mt-2 line-clamp-3 leading-relaxed">
-                          {featuredNews.ringkasan}
-                        </p>
-                      </div>
-
-                      <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-[#1565C0]">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onSelectBerita) onSelectBerita(featuredNews);
-                          }}
-                          className="flex items-center gap-1.5 hover:underline cursor-pointer"
-                        >
-                          <span>Baca Selengkapnya</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                )}
-
-                {/* Berita Pendamping (Kanan, 5 Kolom) */}
-                <div className="md:col-span-5 space-y-4">
-                  {sideNews.map((news) => (
+              {beritaList.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200">
+                  <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-600">Belum ada warta desa yang dipublikasikan</p>
+                  <p className="text-xs text-slate-400 mt-1">Berita yang dipublikasikan oleh aparatur desa akan muncul di sini.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                  {/* Berita Utama (Kiri, 7 Kolom) */}
+                  {featuredNews && (
                     <article
-                      key={news.id}
-                      onClick={() => onSelectBerita && onSelectBerita(news)}
-                      className="p-4 rounded-xl bg-slate-50/50 border border-slate-200/80 hover:border-[#1565C0] transition-all flex flex-col justify-between cursor-pointer group hover:shadow-xs"
+                      onClick={() => onSelectBerita && onSelectBerita(featuredNews)}
+                      className="md:col-span-7 bg-slate-50/50 rounded-xl overflow-hidden border border-slate-200/80 flex flex-col justify-between hover:border-[#1565C0] transition-all cursor-pointer group hover:shadow-md"
                     >
-                      <div className="flex gap-3">
+                      <div className="relative h-48 sm:h-56 bg-slate-100 overflow-hidden">
                         <img
-                          src={news.gambar_url}
-                          alt={news.judul}
-                          className="w-20 h-20 rounded-lg object-cover shrink-0 border border-slate-200 group-hover:opacity-90"
+                          src={featuredNews.gambar_url}
+                          alt={featuredNews.judul}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-bold text-[#1565C0] uppercase">
-                            {news.kategori}
-                          </span>
-                          <h4 className="font-bold text-xs text-[#0D2A4A] leading-snug line-clamp-2 mt-0.5 group-hover:text-[#1565C0] transition-colors">
-                            {news.judul}
-                          </h4>
-                          <span className="text-[10px] text-slate-400 block mt-1">
-                            {new Date(news.published_at).toLocaleDateString('id-ID', {
-                              day: 'numeric',
-                              month: 'short'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 pt-2 border-t border-slate-100 flex justify-end">
-                        <span className="text-[11px] font-semibold text-[#1565C0] flex items-center gap-1">
-                          <span>Baca Berita</span>
-                          <ChevronRight className="w-3 h-3" />
+                        <span className="absolute top-3 left-3 px-2.5 py-1 bg-[#0D2A4A]/90 text-white text-[10px] font-bold rounded-md">
+                          {featuredNews.kategori}
                         </span>
                       </div>
-                    </article>
-                  ))}
 
-                  <div className="p-4 bg-blue-50/70 rounded-xl border border-blue-200 text-xs">
-                    <div className="font-bold text-[#0D2A4A] mb-1 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-[#1565C0]" />
-                      <span>Ingin Menulis Informasi Warga?</span>
+                      <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                        <div>
+                          <div className="text-[11px] text-slate-400 flex items-center gap-2 mb-1.5">
+                            <Calendar className="w-3 h-3" />
+                            <span>
+                              {new Date(featuredNews.published_at).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                              })}
+                            </span>
+                            <span>•</span>
+                            <span>{featuredNews.penulis}</span>
+                          </div>
+                          <h3 className="font-heading font-bold text-[#0D2A4A] text-base leading-snug group-hover:text-[#1565C0] transition-colors">
+                            {featuredNews.judul}
+                          </h3>
+                          <p className="text-xs text-slate-600 mt-2 line-clamp-3 leading-relaxed">
+                            {featuredNews.ringkasan}
+                          </p>
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-[#1565C0]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onSelectBerita) onSelectBerita(featuredNews);
+                            }}
+                            className="flex items-center gap-1.5 hover:underline cursor-pointer"
+                          >
+                            <span>Baca Selengkapnya</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  )}
+
+                  {/* Berita Pendamping (Kanan, 5 Kolom) */}
+                  <div className="md:col-span-5 space-y-4">
+                    {sideNews.map((news) => (
+                      <article
+                        key={news.id}
+                        onClick={() => onSelectBerita && onSelectBerita(news)}
+                        className="p-4 rounded-xl bg-slate-50/50 border border-slate-200/80 hover:border-[#1565C0] transition-all flex flex-col justify-between cursor-pointer group hover:shadow-xs"
+                      >
+                        <div className="flex gap-3">
+                          <img
+                            src={news.gambar_url}
+                            alt={news.judul}
+                            className="w-20 h-20 rounded-lg object-cover shrink-0 border border-slate-200 group-hover:opacity-90"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] font-bold text-[#1565C0] uppercase">
+                              {news.kategori}
+                            </span>
+                            <h4 className="font-bold text-xs text-[#0D2A4A] leading-snug line-clamp-2 mt-0.5 group-hover:text-[#1565C0] transition-colors">
+                              {news.judul}
+                            </h4>
+                            <span className="text-[10px] text-slate-400 block mt-1">
+                              {new Date(news.published_at).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'short'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-slate-100 flex justify-end">
+                          <span className="text-[11px] font-semibold text-[#1565C0] flex items-center gap-1">
+                            <span>Baca Berita</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+
+                    <div className="p-4 bg-blue-50/70 rounded-xl border border-blue-200 text-xs">
+                      <div className="font-bold text-[#0D2A4A] mb-1 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-[#1565C0]" />
+                        <span>Ingin Menulis Informasi Warga?</span>
+                      </div>
+                      <p className="text-slate-600 text-[11px] leading-relaxed">
+                        Kontributor publik dapat mengirimkan warta kegiatan dusun melalui Dashboard Kontributor.
+                      </p>
                     </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Kontributor publik dapat mengirimkan warta kegiatan dusun melalui Dashboard Kontributor.
-                    </p>
                   </div>
                 </div>
-              </div>
+              )}
             </section>
 
             {/* SECTION 3: ETALASE PRODUK UMKM 4 DUSUN */}
@@ -659,74 +686,84 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
                 <span className="text-xs text-slate-400 hidden sm:inline">Dukung Produk Lokal</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {INITIAL_UMKM.slice(0, 3).map((u) => (
-                  <div
-                    key={u.id}
-                    onClick={() => onSelectUmkm && onSelectUmkm(u)}
-                    className="bg-slate-50/40 rounded-xl border border-slate-200/80 p-3.5 flex flex-col justify-between hover:border-[#2E7D32] hover:shadow-md transition-all cursor-pointer group"
-                  >
-                    <div>
-                      {/* Foto & Logo UMKM */}
-                      <div className="h-36 rounded-lg overflow-hidden mb-2.5 bg-slate-100 relative">
-                        <img
-                          src={u.foto_url}
-                          alt={u.nama_usaha}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-md shadow-xs">
-                          <Store className="w-3 h-3 text-[#2E7D32]" />
-                          <span className="text-[10px] font-bold text-slate-800">Logo UMKM</span>
+              {umkmList.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200">
+                  <Store className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-600">Belum ada produk UMKM warga yang terdaftar</p>
+                  <p className="text-xs text-slate-400 mt-1">Daftarkan usaha warga melalui panel admin atau kontributor.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {umkmList.slice(0, 3).map((u) => (
+                    <div
+                      key={u.id}
+                      onClick={() => onSelectUmkm && onSelectUmkm(u)}
+                      className="bg-slate-50/40 rounded-xl border border-slate-200/80 p-3.5 flex flex-col justify-between hover:border-[#2E7D32] hover:shadow-md transition-all cursor-pointer group"
+                    >
+                      <div>
+                        {/* Foto & Logo UMKM */}
+                        <div className="h-36 rounded-lg overflow-hidden mb-2.5 bg-slate-100 relative">
+                          <img
+                            src={u.foto_url}
+                            alt={u.nama_usaha}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-md shadow-xs">
+                            <Store className="w-3 h-3 text-[#2E7D32]" />
+                            <span className="text-[10px] font-bold text-slate-800">Logo UMKM</span>
+                          </div>
                         </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-[#2E7D32] rounded">
+                            {u.kategori}
+                          </span>
+                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <MapPin className="w-2.5 h-2.5" />
+                            <span>{u.dusun}</span>
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-xs sm:text-sm text-[#0D2A4A] mt-1.5 leading-snug group-hover:text-[#2E7D32] transition-colors">
+                          {u.nama_usaha}
+                        </h4>
+                        <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed">
+                          {u.deskripsi}
+                        </p>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-[#2E7D32] rounded">
-                          {u.kategori}
-                        </span>
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <MapPin className="w-2.5 h-2.5" />
-                          <span>{u.dusun}</span>
-                        </span>
+                      <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between">
+                        <div className="text-xs font-mono font-bold text-[#2E7D32]">{u.harga_rentang}</div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onSelectUmkm) onSelectUmkm(u);
+                          }}
+                          className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors shadow-xs cursor-pointer"
+                        >
+                          <span>Lihat Produk</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
                       </div>
-                      <h4 className="font-bold text-xs sm:text-sm text-[#0D2A4A] mt-1.5 leading-snug group-hover:text-[#2E7D32] transition-colors">
-                        {u.nama_usaha}
-                      </h4>
-                      <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed">
-                        {u.deskripsi}
-                      </p>
                     </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-between">
-                      <div className="text-xs font-mono font-bold text-[#2E7D32]">{u.harga_rentang}</div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onSelectUmkm) onSelectUmkm(u);
-                        }}
-                        className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors shadow-xs cursor-pointer"
-                      >
-                        <span>Lihat Produk</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {/* Tombol Lihat Selengkapnya */}
-              <div className="pt-2 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setShowAllUmkmModal(true)}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-white hover:bg-emerald-50 text-[#2E7D32] border border-[#2E7D32]/40 hover:border-[#2E7D32] rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer group"
-                >
-                  <Store className="w-4 h-4 text-[#2E7D32]" />
-                  <span>Lihat Selengkapnya ({INITIAL_UMKM.length} Potensi UMKM Warga 4 Dusun)</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              </div>
+              {umkmList.length > 0 && (
+                <div className="pt-2 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllUmkmModal(true)}
+                    className="w-full sm:w-auto px-6 py-2.5 bg-white hover:bg-emerald-50 text-[#2E7D32] border border-[#2E7D32]/40 hover:border-[#2E7D32] rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer group"
+                  >
+                    <Store className="w-4 h-4 text-[#2E7D32]" />
+                    <span>Lihat Selengkapnya ({umkmList.length} Potensi UMKM Warga 4 Dusun)</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+              )}
             </section>
 
             {/* SECTION 4: GALERI DOKUMENTASI FOTO KEGIATAN */}
@@ -1030,7 +1067,7 @@ export const PublicPortal: React.FC<PublicPortalProps> = ({
 
             {/* Grid Semua UMKM */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-[55vh] overflow-y-auto pr-1">
-              {INITIAL_UMKM.filter((u) => {
+              {umkmList.filter((u) => {
                 const matchSearch =
                   u.nama_usaha.toLowerCase().includes(umkmSearch.toLowerCase()) ||
                   u.pemilik.toLowerCase().includes(umkmSearch.toLowerCase()) ||
