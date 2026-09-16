@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, PermohonanSurat, BeritaDesa, PotensiUmkm } from './types';
 import { MOCK_USERS, INITIAL_PERMOHONAN, INITIAL_BERITA, INITIAL_UMKM } from './data/mockData';
+import { syncAllFromSupabase } from './lib/supabaseClient';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { PublicPortal } from './components/PublicPortal';
@@ -59,6 +60,11 @@ export default function App() {
     setInitialTrackingCode(kodeTiket);
     setCurrentView('pelacakan');
   };
+
+  // Trigger instant synchronization on initial app load
+  useEffect(() => {
+    syncAllFromSupabase().catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#EEF2F6] text-[#0D2A4A] font-sans selection:bg-blue-100 selection:text-[#0D2A4A]">
