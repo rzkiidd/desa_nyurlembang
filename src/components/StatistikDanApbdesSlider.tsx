@@ -743,18 +743,18 @@ export const StatistikDanApbdesSlider: React.FC<StatistikDanApbdesSliderProps> =
       </div>
 
       {/* =========================================================================
-          CARD BARU: EMBED GOOGLE LOOKER STUDIO APBDES DESA NYURLEMBANG
+          CARD: EMBED GOOGLE LOOKER STUDIO APBDES DESA NYURLEMBANG (RESPONSIF MOBILE & DESKTOP)
           Tepat di Bawah Card Akuntabilitas Pengelolaan Keuangan Desa (SPBE)
       ========================================================================= */}
       {activeSlide === 0 && (
-        <div className="mt-6 bg-white rounded-3xl p-6 md:p-8 border border-slate-200/90 shadow-lg space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="mt-6 bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-200/90 shadow-lg space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-[#1565C0] text-xs font-bold rounded-full mb-1.5">
                 <PieChart className="w-3.5 h-3.5 text-[#1565C0]" />
                 <span>Dashboard Interaktif Looker Studio</span>
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-[#0D2A4A] font-heading">
+              <h3 className="text-lg sm:text-2xl font-bold text-[#0D2A4A] font-heading">
                 Akuntabilitas & Visualisasi Realisasi APBDes (Looker Studio)
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
@@ -774,19 +774,39 @@ export const StatistikDanApbdesSlider: React.FC<StatistikDanApbdesSliderProps> =
             </div>
           </div>
 
-          {/* Iframe Looker Studio Container Responsif */}
-          <div className="w-full overflow-hidden rounded-2xl bg-slate-50 border border-slate-200 shadow-inner relative">
-            <div className="w-full" style={{ minHeight: '450px', height: '540px' }}>
+          {/* Iframe Looker Studio Container Responsif Mobile Friendly */}
+          <div className="w-full overflow-hidden rounded-2xl bg-white border border-slate-200/90 shadow-xs relative">
+            {/* Mobile View Notification */}
+            <div className="sm:hidden flex items-center justify-between px-3 py-2 bg-blue-50/70 border-b border-blue-100 text-[11px] text-slate-600">
+              <span className="font-medium">📱 Tampilan Layar Responsif</span>
+              <a
+                href="https://datastudio.google.com/embed/reporting/6f4eb04c-67fe-4e09-a077-32460cee7514/page/p_80vhp52mkd"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-[#1565C0] hover:underline inline-flex items-center gap-1"
+              >
+                <span>Buka Fullscreen</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+
+            <div className="w-full relative h-[380px] sm:h-[480px] md:h-[560px] lg:h-[620px] overflow-hidden">
               <iframe
                 title="Dashboard Pelaporan APBDes Looker Studio Desa Nyurlembang"
                 width="100%"
                 height="100%"
                 src="https://datastudio.google.com/embed/reporting/6f4eb04c-67fe-4e09-a077-32460cee7514/page/p_80vhp52mkd"
                 frameBorder="0"
-                style={{ border: 0, width: '100%', height: '100%', minHeight: '450px' }}
+                style={{
+                  border: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'block'
+                }}
                 allowFullScreen
+                loading="lazy"
                 sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-                className="w-full h-full"
+                className="w-full h-full block"
               />
             </div>
           </div>
