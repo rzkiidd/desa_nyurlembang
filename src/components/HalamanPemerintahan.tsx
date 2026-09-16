@@ -1,5 +1,7 @@
-import React from 'react';
-import { getStoredPejabatDesa } from '../lib/supabaseClient';
+import React, { useState, useEffect } from 'react';
+import { getStoredPejabatDesa, getStoredPengaturanDesa } from '../lib/supabaseClient';
+import { useRealtimeSync } from '../lib/useRealtimeSync';
+import { PejabatDesa } from '../types';
 import {
   Users,
   ShieldCheck,
@@ -19,7 +21,33 @@ interface HalamanPemerintahanProps {
 }
 
 export const HalamanPemerintahan: React.FC<HalamanPemerintahanProps> = ({ onBack }) => {
-  const pejabatList = getStoredPejabatDesa().sort((a, b) => a.urutan - b.urutan);
+  const [pejabatList, setPejabatList] = useState<PejabatDesa[]>([]);
+  const pengaturan = getStoredPengaturanDesa();
+
+  const loadData = () => {
+    setPejabatList(getStoredPejabatDesa().sort((a, b) => a.urutan - b.urutan));
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useRealtimeSync('pejabat_desa', () => {
+    loadData();
+  });
+
+  // Single Source of Truth Kepala Desa dari database
+  const kades = pejabatList.find((p) => p.jabatan.toLowerCase().includes('kepala desa')) || {
+    id: 'pj-kades',
+    nama: 'H. Wardi, S.AP',
+    jabatan: 'Kepala Desa Nyurlembang',
+    nip: '19750812 200501 1 003',
+    foto_url: pengaturan.sambutan_kades_foto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    urutan: 1,
+  };
+
+  // Aparatur desa selain Kepala Desa
+  const perangkatList = pejabatList.filter((p) => !p.jabatan.toLowerCase().includes('kepala desa'));
 
   const bpdMembers = [
     { nama: 'Lalu Ahmad Zaini, S.Pd', jabatan: 'Ketua BPD Nyurlembang', dusun: 'Nyurlembang Daye' },
@@ -82,15 +110,19 @@ export const HalamanPemerintahan: React.FC<HalamanPemerintahanProps> = ({ onBack
 
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80"
-            alt="H. Wardi, S.AP"
+            src={kades.foto_url || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=80"}
+            alt={kades.nama}
             className="w-32 h-40 rounded-2xl object-cover border-2 border-[#1565C0] shadow-md shrink-0"
           />
           <div className="space-y-3 text-center sm:text-left flex-1">
             <div>
-              <h3 className="text-xl font-bold text-[#0D2A4A] font-heading">H. Wardi, S.AP</h3>
-              <div className="text-xs font-bold text-[#1565C0]">Kepala Desa Nyurlembang</div>
-              <div className="text-[11px] font-mono text-slate-400 mt-0.5">NIPD: 52.01.07.2001</div>
+              <h3 className="text-xl font-bold text-[#0D2A4A] font-heading">{kades.nama}</h3>
+              <div className="text-xs font-bold text-[#1565C0]">{kades.jabatan}</div>
+              {kades.nip && (
+                <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                  {kades.nip.startsWith('NIP') ? kades.nip : `NIPD: ${kades.nip}`}
+                </div>
+              )}
             </div>
 
             <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
@@ -120,11 +152,11 @@ export const HalamanPemerintahan: React.FC<HalamanPemerintahanProps> = ({ onBack
               Perangkat & Aparatur Pemerintahan Desa
             </h2>
           </div>
-          <span className="text-xs font-bold text-slate-400">{pejabatList.length} Aparatur</span>
+          <span className="text-xs font-bold text-slate-400">{perangkatList.length} Aparatur</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {pejabatList.map((p) => (
+          {perangkatList.map((p) => (
             <div
               key={p.id}
               className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-[#1565C0] transition-all flex items-center gap-3.5 shadow-2xs"
